@@ -43,6 +43,11 @@ bdi{unicode-bidi:isolate}
 @keyframes drift{to{transform:translate3d(4vmax,3vmax,0) scale(1.1)}}
 @keyframes tw{0%,100%{opacity:0}50%{opacity:.8}}
 .wrap{max-width:560px;margin-inline:auto;display:flex;flex-direction:column;gap:14px}
+/* Prevent mobile horizontal overflow and keep every screen aligned to the viewport */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.wrap{width:100%;min-width:0}
+.wrap>*{min-width:0;max-width:100%}
+.card,.glass{min-width:0}
 .wrap.in>*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*40ms)}
 @keyframes rise{from{opacity:0;transform:translateY(12px) scale(.985)}}
 .glass{background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03) 55%),var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--stroke);box-shadow:var(--shadow),inset 0 1px 0 var(--hi),inset 0 -1px 0 rgba(255,255,255,.04);border-radius:30px}
