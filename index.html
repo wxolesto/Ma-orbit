@@ -46,8 +46,11 @@ bdi{unicode-bidi:isolate}
 /* Prevent mobile horizontal overflow and keep every screen aligned to the viewport */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
 .wrap{width:100%;min-width:0}
+#app{width:100%;max-width:100%;min-width:0;overflow-x:clip}
 .wrap>*{min-width:0;max-width:100%}
 .card,.glass{min-width:0}
+.top,.seg2,.sbr,.hour-head,.goal,.sub{min-width:0}
+.top>.row{min-width:0;flex-shrink:0}
 .wrap.in>*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*40ms)}
 @keyframes rise{from{opacity:0;transform:translateY(12px) scale(.985)}}
 .glass{background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03) 55%),var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--stroke);box-shadow:var(--shadow),inset 0 1px 0 var(--hi),inset 0 -1px 0 rgba(255,255,255,.04);border-radius:30px}
@@ -125,7 +128,7 @@ body.run .dock{transform:translateY(140%);opacity:0;pointer-events:none}.dock{tr
 .toast{padding:11px 20px;border-radius:99px;background:var(--toastbg);border:1px solid var(--stroke);font-size:14px;animation:tin .4s var(--ease) both;box-shadow:var(--shadow);white-space:nowrap}
 @keyframes tin{from{opacity:0;transform:translateY(-14px) scale(.9)}}
 /* stats */
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.kpi{padding:16px 14px;text-align:center;border-radius:26px}.kpi b{display:block;font-size:26px;font-weight:700;line-height:1.4}.kpi small{color:var(--muted);font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}.kpi{padding:16px 14px;text-align:center;border-radius:26px;min-width:0;overflow-wrap:anywhere}.kpi b{display:block;font-size:26px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}.kpi small{color:var(--muted);font-size:12.5px}
 .seg2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.seg2 h3{font-size:16px}
 .bars7{display:flex;gap:8px;align-items:flex-end;height:130px;margin-top:6px;direction:ltr;position:relative}
 .bars7>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
@@ -245,7 +248,37 @@ const KEY='orbit.v1';
 const COLORS=['#5bb8ff','#c8f03c','#ff8a7a','#ffc95c','#b79bff','#4de8c2','#ff7ad1','#8aa0ff'];
 const DEF=()=>({subs:[],log:[],opts:{focus:25,short:5,long:15,every:4,goal:120,auto:false,snd:true,hap:true,wake:true,ntf:true},theme:'orbit',run:null,mode:'focus',sel:null,cyc:0,pend:null,seq:1});
 let S=DEF();
-try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&typeof j==='object'){S=Object.assign(DEF(),j);S.opts=Object.assign(DEF().opts,j.opts||{})}}catch(e){}
+try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&typeof j==='object'&&!Array.isArray(j)){S=Object.assign(DEF(),j);S.opts=Object.assign(DEF().opts,j.opts&&typeof j.opts==='object'?j.opts:{})}}catch(e){}
+const clampInt=(v,d,min,max)=>{const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,Math.round(n))):d};
+const finite=v=>v!==null&&v!==undefined&&Number.isFinite(Number(v));
+S.opts.focus=clampInt(S.opts.focus,25,1,600);
+S.opts.short=clampInt(S.opts.short,5,1,600);
+S.opts.long=clampInt(S.opts.long,15,1,600);
+S.opts.every=clampInt(S.opts.every,4,2,8);
+S.opts.goal=clampInt(S.opts.goal,120,10,720);
+['auto','snd','hap','wake','ntf'].forEach(k=>S.opts[k]=S.opts[k]!==false);
+const validThemes=['orbit','aurora','dusk','ember','mono','cloud'];
+if(!validThemes.includes(S.theme))S.theme='orbit';
+if(!['focus','short','long','free'].includes(S.mode))S.mode='focus';
+S.subs=Array.isArray(S.subs)?S.subs.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({...x,name:x.name.slice(0,24),c:/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[0]})).filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i):[];
+S.log=Array.isArray(S.log)?S.log.filter(e=>e&&typeof e==='object'&&finite(e.t)&&finite(e.dur)&&Number(e.dur)>=0&&['b','f','r'].includes(e.k)).map((e,i)=>({...e,id:typeof e.id==='string'?e.id:'legacy_'+i,t:Number(e.t),dur:Number(e.dur),sub:typeof e.sub==='string'?e.sub:null,s:finite(e.s)?Number(e.s):Number(e.t)-Number(e.dur)*1000,sn:typeof e.sn==='string'?e.sn:'',sc:typeof e.sc==='string'?e.sc:'',note:typeof e.note==='string'?e.note:'',g:Array.isArray(e.g)?e.g.filter(x=>Array.isArray(x)&&finite(x[0])).map(x=>[Number(x[0]),finite(x[1])?Number(x[1]):null]):null})):[]; 
+S.seq=clampInt(S.seq,1,1,Number.MAX_SAFE_INTEGER);
+S.cyc=clampInt(S.cyc,0,0,10000000);
+S.sel=typeof S.sel==='string'?S.sel:null;
+S.pend=typeof S.pend==='string'&&S.log.some(e=>e.id===S.pend)?S.pend:null;
+if(S.run){
+ const r=S.run,ph=r&&r.ph,st=r&&r.st;
+ if(!r||typeof r!=='object'||!['focus','short','long','free'].includes(ph)||!finite(st))S.run=null;
+ else{
+  const segs=Array.isArray(r.segs)?r.segs.filter(x=>Array.isArray(x)&&finite(x[0])).map(x=>[Number(x[0]),finite(x[1])?Number(x[1]):null]):[[Number(st),null]];
+  const base={...r,ph,st:Number(st),sub:typeof r.sub==='string'?r.sub:null,paused:!!r.paused,segs};
+  if(ph==='free'){
+   if(!finite(r.t0))S.run=null;
+   else S.run={...base,total:0,t0:Number(r.t0),acc:finite(r.acc)?Math.max(0,Number(r.acc)):0};
+  }else if(!finite(r.total)||Number(r.total)<=0||!finite(r.endsAt))S.run=null;
+  else S.run={...base,total:Number(r.total),endsAt:Number(r.endsAt),left:finite(r.left)?Math.min(Number(r.total),Math.max(0,Number(r.left))):Math.max(0,Number(r.endsAt)-Date.now())};
+ }
+}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const uid=()=>(S.seq++)+'_'+Date.now().toString(36);
 const subOf=id=>S.subs.find(s=>s.id===id);
@@ -322,7 +355,8 @@ async function sched(){
   const l=LN();await unsched();const r=S.run;
   if(!l||!S.opts.ntf||!r||r.paused||r.ph==='free')return;
   try{
-    let p=await l.checkPermissions();if(p.display!=='granted')p=await l.requestPermissions();if(p.display!=='granted')return;
+    let p=await l.checkPermissions();if(p.display!=='granted')p=await l.requestPermissions();
+    if(p.display!=='granted'||S.run!==r||r.paused||!S.opts.ntf)return;
     const f=r.ph==='focus';
     await l.schedule({notifications:[{id:7,title:f?'تمرکز تموم شد':'استراحت تموم شد',body:f?'وقت استراحته':'برگرد سر درس',schedule:{at:new Date(r.endsAt),allowWhileIdle:true}}]});
   }catch(e){}
@@ -331,8 +365,11 @@ let WL=null;
 async function wake(){
   try{
     const need=S.run&&!S.run.paused&&S.opts.wake&&document.visibilityState==='visible'&&navigator.wakeLock;
-    if(need){if(!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',()=>{WL=null})}}
-    else if(WL){const w=WL;WL=null;await w.release()}
+    if(need&&!WL){
+      const lock=await navigator.wakeLock.request('screen');
+      if(S.run&&!S.run.paused&&S.opts.wake&&document.visibilityState==='visible'){WL=lock;WL.addEventListener('release',()=>{if(WL===lock)WL=null})}
+      else await lock.release();
+    }else if(!need&&WL){const w=WL;WL=null;await w.release()}
   }catch(e){WL=null}
 }
 function startRun(){
@@ -497,7 +534,7 @@ function viewStats(){
   h+='<div class="kpis">'+[[dur(td),'تمرکز امروز'],[dur(wk),'تمرکز ۷ روز اخیر'],[dur(btd),'استراحت امروز'],[dur(bwk),'استراحت ۷ روز اخیر'],[num(ns),'جلسه در ۷ روز'],['<span class="flame">'+num(streak())+'</span>','روز پشت‌سرهم (هدف)']].map(x=>'<div class="glass kpi"><b>'+x[0]+'</b><small>'+x[1]+'</small></div>').join('')+'</div>';
   // Study analytics + focus insights
   const focusLogs=S.log.filter(e=>e.k!=='b');
-  const f30=focusLogs.filter(e=>Date.now()-e.t<=30*86400000);
+  const now30=Date.now(),f30=focusLogs.filter(e=>{const age=now30-e.t;return age>=0&&age<=30*86400000});
   const f7=focusLogs.filter(e=>k7.includes(dkey(new Date(e.t))));
   const fsum=xs=>xs.reduce((a,e)=>a+e.dur,0);
   const avg=f30.length?Math.round(fsum(f30)/f30.length):0;
