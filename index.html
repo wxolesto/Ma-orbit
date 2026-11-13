@@ -128,6 +128,7 @@ body.run .dock{transform:translateY(140%);opacity:0;pointer-events:none}.dock{tr
 .bars7 .gl{position:absolute;height:0;flex:none;left:0;right:0;border-top:1.5px dashed rgba(var(--acc),.55);pointer-events:none}
 .bars7 small{font-size:11px;color:var(--muted)}
 .sbr{display:flex;align-items:center;gap:12px;margin-top:12px;font-size:14px}.sbr>span:first-child{width:92px;flex:none;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.sbr .tk{flex:1;height:9px;border-radius:9px;background:var(--line);overflow:hidden}.sbr .tk i{display:block;height:100%;border-radius:9px}.sbr em{font-style:normal;color:var(--muted);font-size:13px;min-width:54px;text-align:end}
+ .hour-chart{display:grid;gap:13px;margin-top:14px}.hour-row{display:grid;gap:6px;min-width:0}.hour-head{display:flex;align-items:center;gap:10px;font-size:13px}.hour-head span{font-weight:600;min-width:66px}.hour-head small{color:var(--muted);font-size:11px;flex:1;direction:ltr;text-align:start}.hour-head b{font-size:12px;font-weight:600;direction:ltr}.hour-track{height:8px;background:var(--line);border-radius:99px;overflow:hidden;direction:ltr}.hour-track i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .35s var(--ease)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:6px}
 .cal .w{text-align:center;font-size:11.5px;color:var(--muted)}
 .cal button,.cal span{aspect-ratio:1;border-radius:12px;display:grid;place-items:center;font-size:12.5px;font-weight:600}
@@ -500,8 +501,10 @@ function viewStats(){
   const hours=Array(24).fill(0);
   f30.forEach(e=>{const st=e.s||e.t-e.dur*1000;hours[new Date(st).getHours()]+=e.dur});
   const peakHour=hours.indexOf(Math.max(0,...hours));
-  const hourMax=Math.max(1,...hours);
-  const hourBars=hours.map((v,i)=>'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0"><i title="'+i+':00 · '+dur(v)+'" style="display:block;width:100%;height:'+Math.max(3,v/hourMax*48).toFixed(1)+'px;border-radius:5px 5px 2px 2px;background:var(--accent);opacity:'+(v?'.9':'.18')+'"></i><small style="font-size:9px;color:var(--muted)">'+(i%3===0?num(i):'')+'</small></div>').join('');
+  const periods=[{label:'بامداد',range:'00–04',start:0,end:4},{label:'صبح زود',range:'04–08',start:4,end:8},{label:'صبح',range:'08–12',start:8,end:12},{label:'ظهر',range:'12–16',start:12,end:16},{label:'عصر',range:'16–20',start:16,end:20},{label:'شب',range:'20–24',start:20,end:24}];
+  const periodValues=periods.map(p=>hours.slice(p.start,p.end).reduce((a,v)=>a+v,0));
+  const periodMax=Math.max(1,...periodValues);
+  const hourBars=periods.map((p,i)=>'<div class="hour-row"><div class="hour-head"><span>'+p.label+'</span><small>'+num(p.range)+'</small><b>'+dur(periodValues[i])+'</b></div><div class="hour-track"><i style="width:'+(periodValues[i]?Math.max(3,periodValues[i]/periodMax*100):0).toFixed(1)+'%"></i></div></div>').join('');
   const weekdays=['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'],weekHours=Array(7).fill(0);
   f30.forEach(e=>weekHours[new Date(e.t).getDay()]+=e.dur);
   const bestWeekday=weekHours.indexOf(Math.max(0,...weekHours));
@@ -509,7 +512,7 @@ function viewStats(){
   const bestSubject=Object.entries(subjectTotals).sort((a,b)=>b[1]-a[1])[0];
   h+='<div class="glass card"><div class="seg2"><h3>تحلیل مطالعه</h3><small class="muted">۳۰ روز اخیر</small></div><div class="kpis">'
     +[[avg?dur(avg):'—','میانگین هر جلسه'],[longest?dur(longest):'—','طولانی‌ترین جلسه'],[num(active30),'روز فعال'],[dur(fsum(f7)),'تمرکز این هفته']].map(x=>'<div class="glass kpi"><b>'+x[0]+'</b><small>'+x[1]+'</small></div>').join('')
-    +'</div><div style="margin-top:18px"><div class="seg2"><h3>ساعت‌های پربازده</h3><small class="muted">'+(f30.length?num(peakHour+':00'):'—')+'</small></div><div style="display:flex;align-items:flex-end;gap:4px;height:66px;direction:ltr">'+hourBars+'</div><p class="muted" style="font-size:11px;margin:8px 0 0;text-align:center">زمان شروع جلسه‌های تمرکز در طول شبانه‌روز</p></div></div>';
+    +'</div><div style="margin-top:18px"><div class="seg2"><h3>ساعت‌های پربازده</h3><small class="muted">'+(f30.length?num(peakHour+':00'):'—')+'</small></div><div class="hour-chart">'+hourBars+'</div><p class="muted" style="font-size:11px;margin:12px 0 0;text-align:center">مدت تمرکز در هر بازه از شبانه‌روز · ۳۰ روز اخیر</p></div></div>';
   h+='<div class="glass card"><div class="seg2"><h3>بینش‌های تمرکز</h3><small class="muted">بر اساس جلسات ثبت‌شده</small></div><div class="sbr"><span>روز برتر</span><div style="flex:1;font-weight:600">'+(f30.length?weekdays[bestWeekday]:'—')+'</div><em>'+(f30.length?dur(weekHours[bestWeekday]):'—')+'</em></div><div class="sbr"><span>ساعت اوج</span><div style="flex:1;font-weight:600">'+(f30.length?num(peakHour+':00'):'—')+'</div><em>'+(f30.length?dur(hours[peakHour]):'—')+'</em></div><div class="sbr"><span>درس اصلی</span><div style="flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(bestSubject?esc((subOf(bestSubject[0])||{}).name||focusLogs.find(e=>(e.sub||'_')===bestSubject[0])?.sn||'عمومی'):'—')+'</div><em>'+(bestSubject?dur(bestSubject[1]):'—')+'</em></div></div>';
   // bars
   const mx=Math.max(gs,...k7.map(k=>by[k]||0),1);
