@@ -490,7 +490,7 @@ function viewStats(){
   if(!S.log.length)h+='<div class="glass empty"><p>هنوز جلسه‌ای ثبت نشده. اولین تمرکزت رو شروع کن.</p></div>';
   h+='<div class="kpis">'+[[dur(td),'تمرکز امروز'],[dur(wk),'تمرکز ۷ روز اخیر'],[dur(btd),'استراحت امروز'],[dur(bwk),'استراحت ۷ روز اخیر'],[num(ns),'جلسه در ۷ روز'],['<span class="flame">'+num(streak())+'</span>','روز پشت‌سرهم (هدف)']].map(x=>'<div class="glass kpi"><b>'+x[0]+'</b><small>'+x[1]+'</small></div>').join('')+'</div>';
   // Study analytics + focus insights
-  const focusLogs=S.log.filter(e=>e.k==='f');
+  const focusLogs=S.log.filter(e=>e.k!=='b');
   const f30=focusLogs.filter(e=>Date.now()-e.t<=30*86400000);
   const f7=focusLogs.filter(e=>k7.includes(dkey(new Date(e.t))));
   const fsum=xs=>xs.reduce((a,e)=>a+e.dur,0);
