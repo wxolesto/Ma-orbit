@@ -194,6 +194,21 @@ html.tf *{transition:background-color .35s,color .35s,border-color .35s,box-shad
 .wl .wi{height:44px;display:grid;place-items:center;font-family:'SFP',sans-serif;font-weight:700;font-size:26px;color:var(--fg);transform-origin:center;will-change:transform,opacity;transition:none;pointer-events:auto}
 .segs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.segs span{padding:4px 12px;border-radius:99px;background:var(--glass);border:1px solid var(--stroke);font-size:12.5px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
+
+/* Subject weekly goals */
+.subject-goals{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+.subject-goal{display:flex;flex-direction:column;gap:8px;min-width:0}
+.subject-goal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.subject-goal-name{display:flex;align-items:center;gap:9px;min-width:0;font-weight:600}
+.subject-goal-name span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.subject-goal-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+.subject-goal-track{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.subject-goal-track i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .5s var(--ease)}
+.subject-goal-edit{flex:none;padding:6px 11px;border:1px solid var(--stroke);border-radius:99px;background:var(--glass);font-size:12px;color:var(--muted)}
+.goal-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:18px;background:var(--glass);border:1px solid var(--stroke)}
+.goal-summary b{font-size:17px}
+.goal-summary small{display:block;color:var(--muted);font-size:12px}
+
 </style>
 </head>
 <body>
@@ -261,6 +276,7 @@ const validThemes=['orbit','aurora','dusk','ember','mono','cloud'];
 if(!validThemes.includes(S.theme))S.theme='orbit';
 if(!['focus','short','long','free'].includes(S.mode))S.mode='focus';
 S.subs=Array.isArray(S.subs)?S.subs.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({...x,name:x.name.slice(0,24),c:/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[0]})).filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i):[];
+S.subs.forEach(x=>{x.weeklyGoal=x.weeklyGoal==null?null:clampInt(x.weeklyGoal,60,60,4200)});
 S.log=Array.isArray(S.log)?S.log.filter(e=>e&&typeof e==='object'&&finite(e.t)&&finite(e.dur)&&Number(e.dur)>=0&&['b','f','r'].includes(e.k)).map((e,i)=>({...e,id:typeof e.id==='string'?e.id:'legacy_'+i,t:Number(e.t),dur:Number(e.dur),sub:typeof e.sub==='string'?e.sub:null,s:finite(e.s)?Number(e.s):Number(e.t)-Number(e.dur)*1000,sn:typeof e.sn==='string'?e.sn:'',sc:typeof e.sc==='string'?e.sc:'',note:typeof e.note==='string'?e.note:'',g:Array.isArray(e.g)?e.g.filter(x=>Array.isArray(x)&&finite(x[0])).map(x=>[Number(x[0]),finite(x[1])?Number(x[1]):null]):null})):[]; 
 S.seq=clampInt(S.seq,1,1,Number.MAX_SAFE_INTEGER);
 S.cyc=clampInt(S.cyc,0,0,10000000);
@@ -532,6 +548,13 @@ function viewStats(){
   let h=head('آمار');
   if(!S.log.length)h+='<div class="glass empty"><p>هنوز جلسه‌ای ثبت نشده. اولین تمرکزت رو شروع کن.</p></div>';
   h+='<div class="kpis">'+[[dur(td),'تمرکز امروز'],[dur(wk),'تمرکز ۷ روز اخیر'],[dur(btd),'استراحت امروز'],[dur(bwk),'استراحت ۷ روز اخیر'],[num(ns),'جلسه در ۷ روز'],['<span class="flame">'+num(streak())+'</span>','روز پشت‌سرهم (هدف)']].map(x=>'<div class="glass kpi"><b>'+x[0]+'</b><small>'+x[1]+'</small></div>').join('')+'</div>';
+  // Weekly subject goals
+  const weekSubjectTotals={};S.log.forEach(e=>{if(e.k!=='b'&&k7.includes(dkey(new Date(e.t)))){const id=e.sub||'_';weekSubjectTotals[id]=(weekSubjectTotals[id]||0)+e.dur}});
+  const plannedSubjects=S.subs.filter(s=>s.weeklyGoal>0),plannedTotal=plannedSubjects.reduce((a,s)=>a+s.weeklyGoal*60,0),earnedTotal=plannedSubjects.reduce((a,s)=>a+Math.min(weekSubjectTotals[s.id]||0,s.weeklyGoal*60),0);
+  h+='<div class="glass card"><div class="seg2"><h3>هدف هفتگی درس‌ها</h3><small class="muted">۷ روز اخیر</small></div>'
+    +(S.subs.length?'<div class="subject-goals">'+S.subs.map(s=>{const target=(s.weeklyGoal||0)*60,actual=weekSubjectTotals[s.id]||0,pct=target?Math.min(100,Math.round(actual/target*100)):0;return '<div class="subject-goal"><div class="subject-goal-head"><div class="subject-goal-name"><i class="dot" style="background:'+s.c+';color:'+s.c+'"></i><span>'+esc(s.name)+'</span></div><button class="subject-goal-edit" data-goal-sub="'+s.id+'">'+(target?'ویرایش هدف':'تنظیم هدف')+'</button></div>'+(target?'<div class="subject-goal-track"><i style="width:'+pct+'%;background:'+s.c+'"></i></div><div class="subject-goal-meta"><span>'+dur(actual)+' از '+dur(target)+'</span><b>'+num(pct)+'%</b></div>':'<div class="subject-goal-meta"><span>برای این درس هنوز هدفی تعیین نشده</span></div>')+'</div>'}).join('')+'</div>'
+      +(plannedTotal?'<div class="goal-summary" style="margin-top:16px"><div><b>'+dur(earnedTotal)+' از '+dur(plannedTotal)+'</b><small>پیشرفت مجموع هدف‌های هفتگی</small></div><b>'+num(Math.round(earnedTotal/plannedTotal*100))+'%</b></div>':'')
+      :'<p class="muted" style="font-size:13px;margin:12px 0 0">اول از بخش درس‌ها، درس‌هایت را اضافه کن تا برای هرکدام هدف هفتگی تعیین کنی.</p>')+'</div>';
   // Study analytics + focus insights
   const focusLogs=S.log.filter(e=>e.k!=='b');
   const now30=Date.now(),f30=focusLogs.filter(e=>{const age=now30-e.t;return age>=0&&age<=30*86400000});
@@ -678,6 +701,15 @@ function cfgSheet(){
     const sw=$('#scrim');
   });
 }
+function subjectGoalSheet(id){
+  const s=subOf(id);if(!s)return;
+  const current=s.weeklyGoal||0;
+  openSheet('<h2>هدف هفتگی '+esc(s.name)+'</h2><p class="tip">مدت زمانی که می‌خواهی در هر هفته برای این درس مطالعه کنی.</p><div class="frm"><label class="muted" for="weeklyGoalInput">هدف به ساعت</label><input class="inp" id="weeklyGoalInput" type="number" inputmode="decimal" min="1" max="70" step="0.5" placeholder="مثلاً ۸" value="'+(current?String(current/60):'')+'"><div class="acts"><button class="pill" id="saveWeeklyGoal">ذخیره هدف</button>'+(current?'<button class="pill danger" id="clearWeeklyGoal">حذف هدف</button>':'')+'</div></div>',r=>{
+    const input=$('#weeklyGoalInput',r);
+    $('#saveWeeklyGoal',r).onclick=()=>{const hours=Number(input.value);if(!Number.isFinite(hours)||hours<1||hours>70){input.focus();return}s.weeklyGoal=Math.round(hours*60);save();closeSheet(()=>render(false))};
+    const clear=$('#clearWeeklyGoal',r);if(clear)clear.onclick=()=>{s.weeklyGoal=null;save();closeSheet(()=>render(false))};
+  });
+}
 function daySheet(k){
   const es=S.log.filter(e=>dkey(new Date(e.t))===k).sort((a,b)=>a.t-b.t),tot=es.filter(e=>e.k!=='b').reduce((a,e)=>a+e.dur,0),btot=es.filter(e=>e.k==='b').reduce((a,e)=>a+e.dur,0);
   openSheet('<h2>'+jlabel(k)+'</h2><p class="tip">'+(es.length?'تمرکز: '+dur(tot)+' · استراحت: '+dur(btot):'جلسه‌ای ثبت نشده.')+'</p><div>'+es.map(e=>'<div class="srow"><i class="dot" style="background:'+scol(e)+';color:'+scol(e)+'"></i><div><b>'+esc(sname(e))+(e.k==='r'?' · آزاد':'')+'</b><small>'+num(clockT(e.s||e.t-e.dur*1000)+' – '+clockT(e.t))+(e.note?' · '+esc(e.note):'')+'</small>'+(e.g&&e.g.length>1?'<small>'+e.g.map(x=>num(clockT(x[0])+' – '+clockT(x[1]))).join(' · ')+'</small>':'')+'</div><span>'+dur(e.dur)+'</span><button class="rbtn" data-del="'+e.id+'" aria-label="delete">'+svg('trash')+'</button></div>').join('')+'</div>',r=>{
@@ -688,7 +720,7 @@ function daySheet(k){
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{
-  const t=ev.target.closest('[data-tab],[data-a],[data-sub],[data-mode],[data-rng],[data-day],[data-cm],[data-edit]');if(!t)return;
+  const t=ev.target.closest('[data-tab],[data-a],[data-sub],[data-mode],[data-rng],[data-day],[data-cm],[data-edit],[data-goal-sub]');if(!t)return;
   if(sheetOpen&&!t.closest('#sheet')&&!t.closest('.tabs'))return;
   const d=t.dataset;
   if(d.tab){if(S.run&&false)return;if(tab!==d.tab){tab=d.tab;render(true);placeInd(true)}return}
@@ -698,6 +730,7 @@ document.addEventListener('click',ev=>{
   if(d.day){daySheet(d.day);return}
   if(d.cm){cm=[cm[0],cm[1]+(+d.cm)];if(cm[1]>12){cm=[cm[0]+1,1]}if(cm[1]<1){cm=[cm[0]-1,12]}render(false);return}
   if(d.edit){subSheet(d.edit);return}
+  if(d.goalSub){subjectGoalSheet(d.goalSub);return}
   switch(d.a){
     case'start':startRun();break;case'pause':pauseRun();break;case'resume':resumeRun();break;
     case'stop':stopSheet();break;case'skip':skipRun();break;case'dur':durSheet();break;
